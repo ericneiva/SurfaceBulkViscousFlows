@@ -88,6 +88,6 @@ GridapPETSc.with() do
         label=L"h^{-3}",
         linewidth=2)
   plot!(size=(600,400),grid=true)
-  savefig("examples/SurfaceBulkInSphereAxisymmetric/" * plot_name)
+  savefig("examples/Verification/" * plot_name)
 
 end

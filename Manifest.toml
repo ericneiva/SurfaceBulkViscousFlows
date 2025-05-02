@@ -2,7 +2,7 @@
 
 julia_version = "1.11.3"
 manifest_format = "2.0"
-project_hash = "03157c548733130e70d99432460e81c90401b175"
+project_hash = "b419ecca98b8848c8238d1eca9605f24cd1e5184"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "e2478490447631aedba0823d4d7a80b2cc8cdb32"
@@ -756,17 +756,13 @@ version = "0.18.8"
 
 [[deps.GridapDistributed]]
 deps = ["BlockArrays", "FillArrays", "ForwardDiff", "Gridap", "LinearAlgebra", "MPI", "PartitionedArrays", "SparseArrays", "SparseMatricesCSR", "WriteVTK"]
-git-tree-sha1 = "54ad38f8c0eecc42a8b7e16271c3e6d4dcf17590"
-repo-rev = "zero_mean_fe_spaces_on_trian_portions"
-repo-url = "https://github.com/ericneiva/GridapDistributed.jl"
+git-tree-sha1 = "4d603a3173dca7504a67b91c3f33f62d34df1c8d"
 uuid = "f9701e48-63b3-45aa-9a63-9bc6c271f355"
-version = "0.4.6"
+version = "0.4.7"
 
 [[deps.GridapEmbedded]]
 deps = ["AbstractTrees", "Algoim", "Combinatorics", "CxxWrap", "FillArrays", "Gridap", "GridapDistributed", "LightGraphs", "LinearAlgebra", "MPI", "MiniQhull", "PartitionedArrays", "Random", "Test", "algoimWrapper_jll"]
-git-tree-sha1 = "17c0b4b7042674ad41203a402c9a86c81332dd90"
-repo-rev = "distributed_agfem_with_algoim_quads"
-repo-url = "https://github.com/gridap/GridapEmbedded.jl.git"
+path = "/home/eric-neiva/.julia/dev/GridapEmbedded"
 uuid = "8838a6a3-0006-4405-b874-385995508d5d"
 version = "0.9.5"
 

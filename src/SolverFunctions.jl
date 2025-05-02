@@ -10,18 +10,10 @@ function mykspsetup(ksp)
   @check_error_code GridapPETSc.PETSC.MatMumpsSetIcntl(mumpsmat[],  4, 0)
   @check_error_code GridapPETSc.PETSC.MatMumpsSetIcntl(mumpsmat[], 28, 2)
   @check_error_code GridapPETSc.PETSC.MatMumpsSetIcntl(mumpsmat[], 29, 2)
-  @check_error_code GridapPETSc.PETSC.MatMumpsSetCntl(mumpsmat[], 3, 1.0e-6)
   @check_error_code GridapPETSc.PETSC.KSPSetFromOptions(ksp[])
 end
 
-check_solver_accuracy(A,x,b) = _check_solver_accuracy(A,x,b)
-
-function check_solver_accuracy(A::PSparseMatrix,x,b)
-  x = GridapDistributed.change_ghost(x,axes(A,2))
-  _check_solver_accuracy(A,x,b)
-end
-
-function _check_solver_accuracy(A,x,b)
+function check_solver_accuracy(A,x,b)
   nr = norm(A*x - b)
   nb = norm(b)
   nx = norm(x)
@@ -44,26 +36,27 @@ function _solve(op,ps)
   x
 end
 
-function solve_surface(op,X,ps)
-  x = _solve(op,ps)
-  u¹,_ = FEFunction(X,x)
-  u¹
-end
-
 function solve_stokes(op,X,ps)
   x = _solve(op,ps)
   u¹,p¹,_ = FEFunction(X,x)
   u¹,p¹
 end
 
-function solve_stokes_stokes(op,X,ps)
-  x = _solve(op,ps)
-  u¹,p¹,_,u²,p²,_ = FEFunction(X,x)
-  u¹,p¹,u²,p²
+function _assemble_problem(a,b,assem,X,Y,A)
+  dv = get_fe_basis(Y)
+  du = get_trial_fe_basis(X)
+  if A === nothing
+    assemble_matrix_and_vector(a(du,dv),b(dv),assem,X,Y)
+  else
+    A,assemble_vector(b(dv),assem,Y)
+  end
 end
 
-function solve_stokes_with_rigid_body(op,X,ps)
-  x = _solve(op,ps)
-  u¹,p¹,_,u² = FEFunction(X,x)
-  u¹,p¹,u²
+function _solve_problem(A,b,Xᵘ,ps)
+  x = similar(b)
+  ss = symbolic_setup(ps, A)
+  ns = numerical_setup(ss, A)
+  solve!(x,ns,b)
+  check_solver_accuracy(A,x,b)
+  FEFunction(Xᵘ,x)
 end
