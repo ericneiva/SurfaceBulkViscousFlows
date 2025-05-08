@@ -7,8 +7,8 @@ Repository that holds the Julia software with code demonstrators of the numerica
 Referred to the paper sections
 
 - _Section 4.1 Verification examples_
-  - Verification in fixed sphere
-  -  Verification with dynamic surface
+  - [Verification in fixed sphere](examples/Verification/VerificationInFixedSphere.jl)
+  - Verification with dynamic surface
 - _Section 4.2 Self-organised shape emergence_
   - Shape emergence
 - _Section 4.3 Relaxation dynamics_
