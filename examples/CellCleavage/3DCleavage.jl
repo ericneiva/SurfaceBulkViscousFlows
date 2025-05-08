@@ -5,13 +5,13 @@ using GridapPETSc: PETSC
 
 using SurfaceBulkViscousFlows
 
-domain = (-0.625,0.625,-0.625,0.625,-0.625,0.625)
+domain = (-0.75,0.75,-0.75,0.75,-0.75,0.75)
 
 ls = AlgoimCallLevelSetFunction(
   x -> 4.0 * 1.2 * ( x[1]*x[1] + x[2]*x[2] + x[3]*x[3] ) - 1.0,
   x -> VectorValue( 8.0 * 1.2 * x[1], 8.0 * 1.2 * x[2], 8.0 * 1.2 * x[3] ) )
 
-Pe   = 25.0
+Pe   = 15.0
 τᵈkₒ = 1.0
 μˡ   = 1.0e-5
 R    = 1.0 / √(4.0*1.2)
