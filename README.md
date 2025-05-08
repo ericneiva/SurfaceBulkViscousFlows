@@ -20,3 +20,43 @@ Referred to the paper sections
   - [3D division](examples/CellCleavage/3DCleavage.jl)
 
 ## Instructions to run the examples
+
+### Prerequisites
+
+  - A Julia installation ([link to instructions](https://julialang.org/install/))
+
+### Running an example
+
+  - Clone the repository at a path of your choice
+  - Open a Julia interactive session on the repository directory
+
+```
+  git clone git@github.com:ericneiva/SurfaceBulkViscousFlows.git
+  cd SurfaceBulkViscousFlows
+  julia --project
+```
+
+  - Before _running an example for the first time_, set up the project dependencies
+
+```julia
+  julia> # press ] to enter Pkg mode...
+  (SurfaceBulkViscousFlows) pkg> instantiate
+```
+
+  - Run the example of your choice
+
+```julia
+  julia> include("examples/Verification/VerificationInFixedSphere.jl")
+```
+
+  - Output files are generated in the folder for inspection
+
+### How to cite this code
+
+In order to give credit to the contributors of this software, we simply ask you to cite the references below in any publication in which you have made use of the repository.
+
+
+
+### Contact
+
+Please, contact [Eric Neiva](mailto:eric.neiva@college-de-france.fr) or [Hervé Turlier](mailto:herve.turlier@college-de-france.fr) if you have any questions.
