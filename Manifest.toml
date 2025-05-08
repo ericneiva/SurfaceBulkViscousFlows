@@ -762,7 +762,9 @@ version = "0.4.7"
 
 [[deps.GridapEmbedded]]
 deps = ["AbstractTrees", "Algoim", "Combinatorics", "CxxWrap", "FillArrays", "Gridap", "GridapDistributed", "LightGraphs", "LinearAlgebra", "MPI", "MiniQhull", "PartitionedArrays", "Random", "Test", "algoimWrapper_jll"]
-path = "/home/eric-neiva/.julia/dev/GridapEmbedded"
+git-tree-sha1 = "5c8d89ca0d86076279235f0c27e2377fb1d14c9a"
+repo-rev = "distributed_agfem_with_algoim_quads"
+repo-url = "https://github.com/gridap/GridapEmbedded.jl.git"
 uuid = "8838a6a3-0006-4405-b874-385995508d5d"
 version = "0.9.5"
 
