@@ -1,6 +1,6 @@
 # SurfaceBulkViscousFlows
 
-Repository that holds the Julia software with code demonstrators of the numerical examples in the paper _"Unfitted finite element modelling of surface-bulk viscous flows in animal cells"_.
+Repository that holds the Julia software with code demonstrators of the numerical examples in the paper _"Unfitted finite element modelling of surface-bulk viscous flows in animal cells"_. https://arxiv.org/abs/2505.05723
 
 ## List of examples
 
