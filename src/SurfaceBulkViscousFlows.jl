@@ -13,6 +13,9 @@ using SparseMatricesCSR
 using GridapPETSc
 using GridapPETSc: PETSC
 
+using DataFrames
+using CSV
+
 using LinearAlgebra: diag, cond
 using Symbolics
 

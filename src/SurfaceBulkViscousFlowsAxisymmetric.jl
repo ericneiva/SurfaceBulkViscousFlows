@@ -618,6 +618,28 @@ function surface_bulk_viscous_flows_axisymmetric(
       writevtk(Σᵇ,name*"_rbb_$i",cellfields=["LS"=>ψᵇ.φ,"curl"=>curl(uᵇ)],nsubcells=4)
     end
 
+    xΓ = dΓ.quad.cell_point.values
+    xΓ = lazy_map(Reindex(xΓ),dΓ.quad.cell_point.ptrs)
+    
+    θΓ = lazy_map(Broadcasting(x->atan(x[2],x[1])),xΓ)
+    θΓ = vcat(θΓ...)
+    
+    xΓ = vcat(xΓ...)
+    xxΓ = map(x->x.data[1],xΓ)
+    xyΓ = map(x->x.data[2],xΓ)
+    
+    perm = sortperm(θΓ)
+    θΓ = θΓ[perm]
+    xxΓ = xxΓ[perm]
+    xyΓ = xyΓ[perm]
+
+    xxΓ = vcat(xxΓ,reverse(xxΓ))
+    xyΓ = vcat(xyΓ,-1.0 .* reverse(xyΓ))
+    θΓ = vcat(θΓ,2*π .- reverse(θΓ))
+    
+    cds = DataFrame("x"=>xxΓ,"y"=>xyΓ,"theta"=>θΓ)
+    CSV.write("examples/OocyteAndSpindle/coordinates/XY_coordinates_$i.csv",cds)
+
     i = i + 1
     t = t + Δt
 
