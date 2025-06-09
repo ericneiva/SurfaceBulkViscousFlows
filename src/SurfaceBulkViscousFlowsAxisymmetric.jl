@@ -21,10 +21,10 @@ function surface_bulk_viscous_flows_axisymmetric(
             name::String = "plt")
 
   # Background geometry
-  cells = (n,div(n,2))
-  h = (domain[2]-domain[1])/n
+  cells   = (n,div(n,2))
+  h       = (domain[2]-domain[1])/n
   bgmodel = CartesianDiscreteModel(domain,cells)
-  Ω = Triangulation(bgmodel)
+  Ω       = Triangulation(bgmodel)
 
   bgmodel.face_labeling.d_to_dface_to_entity[1][(n÷2)+1-(n÷10):(n÷2)+1+(n÷10)] .= 1
   bgmodel.face_labeling.d_to_dface_to_entity[1][(n÷2)+1:(n÷2)+1] .= 9
@@ -63,11 +63,11 @@ function surface_bulk_viscous_flows_axisymmetric(
       else
         cp₋₂ = buffer[].cp₋
         φ₋₂  = buffer[].φ₋
-        __φ = get_free_dof_values(φ₋₂.φ)
-        Ωⱽ  = get_triangulation(Vbg)
-        _ϕ₋ = compute_normal_displacement(cp₋₂,φ₋₂,v₋₂,dt,Ωⱽ)
-        ϕ₋  = __φ - _ϕ₋
-        _φ₋ = FEFunction(Vbg,ϕ₋)
+        __φ  = get_free_dof_values(φ₋₂.φ)
+        Ωⱽ   = get_triangulation(Vbg)
+        _ϕ₋  = compute_normal_displacement(cp₋₂,φ₋₂,v₋₂,dt,Ωⱽ)
+        ϕ₋   = __φ - _ϕ₋
+        _φ₋  = FEFunction(Vbg,ϕ₋)
       end
 
       # Current time level set
@@ -143,9 +143,9 @@ function surface_bulk_viscous_flows_axisymmetric(
     Vstdᵘˡ = TestFESpace(Ωˡ,reffeᵘ,dirichlet_tags=["boundary"],
                                    dirichlet_masks=[(false,true)])
     Vserᵘˡ = TestFESpace(Ωˡ,reffeˢ,conformity=:L2)
-    Vᵘˡ = AgFEMSpace(Vstdᵘˡ,aggsˡ,Vserᵘˡ)
+    Vᵘˡ    = AgFEMSpace(Vstdᵘˡ,aggsˡ,Vserᵘˡ)
     Vstdᵖˡ = TestFESpace(Ωˡ,reffeᵖ)
-    Vᵖˡ = AgFEMSpace(Vstdᵖˡ,aggsˡ)
+    Vᵖˡ    = AgFEMSpace(Vstdᵖˡ,aggsˡ)
 
     # u-surface
     Vʷ = TestFESpace(Ωᶜ,reffeʷ,dirichlet_tags=[5],
@@ -158,9 +158,9 @@ function surface_bulk_viscous_flows_axisymmetric(
     # Trial FE spaces
     Uᵘˡ = TrialFESpace(Vᵘˡ)
     Uᵖˡ = TrialFESpace(Vᵖˡ)
-    Uʷ = TrialFESpace(Vʷ)
-    Uᵉ = TrialFESpace(Vᵉ)
-    Uˡ = TrialFESpace(Vˡ)
+    Uʷ  = TrialFESpace(Vʷ)
+    Uᵉ  = TrialFESpace(Vᵉ)
+    Uˡ  = TrialFESpace(Vˡ)
 
     # Multifield FE spaces
     Yᵛ = MultiFieldFESpace([Vʷ,Vˡ,Vˡ])
@@ -273,13 +273,17 @@ struct RotatedEllipse
   a::Float64
   b::Float64
   θ::Float64
-end
-
-(ψ::RotatedEllipse)(x) = begin
-  cθ = cos(ψ.θ); sθ = sin(ψ.θ)
-  x₀ = ψ.c[1]  ; y₀ = ψ.c[2]
-  x -> ( ( cθ * ( x[1] - x₀ ) - sθ * ( x[2] - y₀ ) ) / ψ.a )^2 + 
-       ( ( sθ * ( x[1] - x₀ ) + cθ * ( x[2] - y₀ ) ) / ψ.b )^2 - 1.0  
+  φ::Function
+  ∇φ::Function
+  function RotatedEllipse(c::VectorValue{2,Float64},
+                          a::Float64,
+                          b::Float64,
+                          θ::Float64)
+    φ = ( x -> ( ( cos(θ) * ( x[1] - c[1] ) + sin(θ) * ( x[2] - c[2] ) ) / a )^2 + 
+               ( ( cos(θ) * ( x[2] - c[2] ) - sin(θ) * ( x[1] - c[1] ) ) / b )^2 - 1.0 )
+    ∇φ = x -> ∇(φ)(x)
+    new(c,a,b,θ,φ,∇φ)
+  end
 end
 
 function surface_bulk_viscous_flows_axisymmetric(
@@ -294,6 +298,7 @@ function surface_bulk_viscous_flows_axisymmetric(
             center::VectorValue{2,Float64},
             x_axis::Float64,
             y_axis::Float64;
+            rotation::Float64 = 0.0,
             initial_density::Function = verification,
             activity::Function = unit_activity_axisymmetric,
             order::Int = 2,
@@ -308,21 +313,21 @@ function surface_bulk_viscous_flows_axisymmetric(
             name::String = "plt")
 
   # Background geometry for FE approximation
-  h = (domain[2]-domain[1])/n
-  cells = (n,div(n,2))
+  h       = (domain[2]-domain[1])/n
+  cells   = (n,div(n,2))
   bgmodel = CartesianDiscreteModel(domain,cells)
-  Ω = Triangulation(bgmodel)
+  Ω       = Triangulation(bgmodel)
 
   # Background geometry for Rigid Body (RB)
-  domain = (domain[1],domain[2],domain[1],domain[2])
-  cells = (n,n) # Symmetric domain
+  domain  = (domain[1],domain[2],domain[1],domain[2])
+  cells   = (n,n) # Symmetric domain
   rbmodel = CartesianDiscreteModel(domain,cells)
-  Σ = Triangulation(rbmodel)
+  Σ       = Triangulation(rbmodel)
 
   # Initial ellipse parameters
   a = x_axis; b = y_axis
-  cˢ = center; θˢ = 0.0
-  cᵇ = center; θᵇ = 0.0
+  cˢ = center; θˢ = rotation
+  cᵇ = center; θᵇ = rotation
 
   # Buffer of active model and integration objects
   degree = order < 3 ? 3 : 2*order
@@ -332,6 +337,7 @@ function surface_bulk_viscous_flows_axisymmetric(
                       φ₋  = nothing, aggsˡ = nothing,
                       cp₋ = nothing, t     = nothing,
                       dS  = nothing, dΣ    = nothing,
+                      ψˢ  = nothing, ψᵇ    = nothing,
                       Vbg = nothing ))
 
   function update_buffer!(i,t,dt,v₋₂,mv₋₂)
@@ -353,20 +359,20 @@ function surface_bulk_viscous_flows_axisymmetric(
       Vbg   = buffer[].Vbg
 
       if buffer[].Ωᶜ === nothing
-        Vbg = TestFESpace(Ω,ReferenceFE(lagrangian,Float64,order))
-        _φ₋ = interpolate_everywhere(ls.φ,Vbg)
+        Vbg  = TestFESpace(Ω,ReferenceFE(lagrangian,Float64,order))
+        _φ₋  = interpolate_everywhere(ls.φ,Vbg)
       else
         cp₋₂ = buffer[].cp₋
         φ₋₂  = buffer[].φ₋
-        __φ = get_free_dof_values(φ₋₂.φ)
-        Ωⱽ  = get_triangulation(Vbg)
-        _ϕ₋ = compute_normal_displacement(cp₋₂,φ₋₂,v₋₂,dt,Ωⱽ)
-        ϕ₋  = __φ - _ϕ₋
-        _φ₋ = FEFunction(Vbg,ϕ₋)
+        __φ  = get_free_dof_values(φ₋₂.φ)
+        Ωⱽ   = get_triangulation(Vbg)
+        _ϕ₋  = compute_normal_displacement(cp₋₂,φ₋₂,v₋₂,dt,Ωⱽ)
+        ϕ₋   = __φ - _ϕ₋
+        _φ₋  = FEFunction(Vbg,ϕ₋)
       end
 
       # Current time level set
-      φ₋  = AlgoimCallLevelSetFunction(_φ₋,∇(_φ₋))
+      φ₋ = AlgoimCallLevelSetFunction(_φ₋,∇(_φ₋))
       ( i % redistance_frequency == 0 ) && begin
         _φ₋ = compute_distance_fe_function(bgmodel,Vbg,φ₋,order,cppdegree=3)
         φ₋  = AlgoimCallLevelSetFunction(_φ₋,∇(_φ₋))
@@ -393,25 +399,25 @@ function surface_bulk_viscous_flows_axisymmetric(
       aggsˡ = aggregate(Ω,is_a₋,is_c₋,IN,is_nᵃ)
 
       Ωˡ,dΩˡ = TriangulationAndMeasure(Ω,v_cell_quad,is_nᵃ,is_a₋)
-      Ωᶜ,dΓ = TriangulationAndMeasure(Ω,s_cell_quad,is_nᶜ,is_c₋)
+      Ωᶜ,dΓ  = TriangulationAndMeasure(Ω,s_cell_quad,is_nᶜ,is_c₋)
 
       dΩᶜ = Measure(Ωᶜ,2*order)
-      nΓ = normal(φ₋,Ω)
+      nΓ  = normal(φ₋,Ω)
 
       # Compute measures for rigid body
-      _ψˢ = RotatedEllipse(cˢ,a,b,θˢ)
-      ψˢ = AlgoimCallLevelSetFunction(_ψˢ,∇(_ψˢ))
+      _ψˢ   = RotatedEllipse(cˢ,a,b,θˢ)
+      ψˢ    = AlgoimCallLevelSetFunction(_ψˢ.φ,_ψˢ.∇φ)
       squad = Quadrature(algoim,ψˢ,degree,phase=CUT)
       _,dS  = TriangulationAndMeasure(Σ,squad)
 
-      _ψᵇ = RotatedEllipse(cᵇ,a,b,θᵇ)
-      ψᵇ = AlgoimCallLevelSetFunction(_ψᵇ,∇(_ψᵇ))
+      _ψᵇ   = RotatedEllipse(cᵇ,a,b,θᵇ)
+      ψᵇ    = AlgoimCallLevelSetFunction(_ψᵇ.φ,_ψᵇ.∇φ)
       vquad = Quadrature(algoim,ψᵇ,degree,phase=IN)
-      _,dΣ = TriangulationAndMeasure(Σ,vquad)
+      _,dΣ  = TriangulationAndMeasure(Σ,vquad)
 
       # Update buffer
-      buffer[] = ( Ωᶜ=Ωᶜ,dΩᶜ=dΩᶜ,Ωˡ=Ωˡ,dΩˡ=dΩˡ,aggsˡ=aggsˡ,
-        dΓ=dΓ,nΓ=nΓ,cp₋=cp₋,φ₋=φ₋,t=t,dS=dS,dΣ=dΣ,Vbg=Vbg )
+      buffer[] = ( Ωᶜ=Ωᶜ,dΩᶜ=dΩᶜ,Ωˡ=Ωˡ,dΩˡ=dΩˡ,aggsˡ=aggsˡ,dΓ=dΓ,
+        nΓ=nΓ,cp₋=cp₋,φ₋=φ₋,t=t,dS=dS,dΣ=dΣ,ψˢ=ψˢ,ψᵇ=ψᵇ,Vbg=Vbg )
       return true
 
     end
@@ -449,9 +455,9 @@ function surface_bulk_viscous_flows_axisymmetric(
     Vstdᵘˡ = TestFESpace(Ωˡ,reffeᵘ,dirichlet_tags=["boundary"],
                                    dirichlet_masks=[(false,true)])
     Vserᵘˡ = TestFESpace(Ωˡ,reffeˢ,conformity=:L2)
-    Vᵘˡ = AgFEMSpace(Vstdᵘˡ,aggsˡ,Vserᵘˡ)
+    Vᵘˡ    = AgFEMSpace(Vstdᵘˡ,aggsˡ,Vserᵘˡ)
     Vstdᵖˡ = TestFESpace(Ωˡ,reffeᵖ)
-    Vᵖˡ = AgFEMSpace(Vstdᵖˡ,aggsˡ)
+    Vᵖˡ    = AgFEMSpace(Vstdᵖˡ,aggsˡ)
 
     # u-surface
     Vʷ = TestFESpace(Ωᶜ,reffeʷ,dirichlet_tags=[5],
@@ -464,9 +470,9 @@ function surface_bulk_viscous_flows_axisymmetric(
     # Trial FE spaces
     Uᵘˡ = TrialFESpace(Vᵘˡ)
     Uᵖˡ = TrialFESpace(Vᵖˡ)
-    Uʷ = TrialFESpace(Vʷ)
-    Uᵉ = TrialFESpace(Vᵉ)
-    Uˡ = TrialFESpace(Vˡ)
+    Uʷ  = TrialFESpace(Vʷ)
+    Uᵉ  = TrialFESpace(Vᵉ)
+    Uˡ  = TrialFESpace(Vˡ)
 
     # Multifield FE spaces
     Yᵛ = MultiFieldFESpace([Vʷ,Vˡ,Vˡ])
@@ -485,7 +491,7 @@ function surface_bulk_viscous_flows_axisymmetric(
   t₀ = 0.0
   Δt = Δt₀
   u₀ = VectorValue(0.0,0.0)
-  m₀ = 2.0
+  m₀ = 0.01
 
   Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ = update_all!(0,t₀,Δt,u₀,m₀)
 
@@ -497,7 +503,7 @@ function surface_bulk_viscous_flows_axisymmetric(
   γᵉ = γᶜ/h
 
   _eₕ = initial_density(Uᵉ,Xʳ,Yʳ,dΓ,dΩᶜ,nΓ)
-  eₕ = interpolate_everywhere(_eₕ,Uᵉ)
+  eₕ  = interpolate_everywhere(x->_eₕ(x,t₀),Uᵉ)
   
   _uₕ(x) = VectorValue(0.0,0.0)
   _pₕ(x) = 0.0
@@ -527,17 +533,17 @@ function surface_bulk_viscous_flows_axisymmetric(
 
     for i in 1:maxiter
 
-      _υₕ = υₕ
+      _υₕ  = υₕ
       _ulₕ = ulₕ
 
       aᵛ,bᵛ = cortical_flow_problem_axisymmetric(
         ulₕ,plₕ,eₕ,dΩᶜ,dΓ,nΓ,γʷ,Pe,μˡ,R,activity)
       Aᵛ,Bᵛ = _assemble_problem(aᵛ,bᵛ,assemᵛ,Xᵛ,Yᵛ,Aᵛ)
-      υₕ,_ = _solve_problem(Aᵛ,Bᵛ,Xᵛ,ps)
+      υₕ,_  = _solve_problem(Aᵛ,Bᵛ,Xᵛ,ps)
 
       aᵘ,bᵘ = bulk_flow_problem_axisymmetric(
         υₕ,dΩˡ,dΓ,nΓ,μˡ,R,γᵅ,h)
-      Aᵘ,Bᵘ = _assemble_problem(aᵘ,bᵘ,assemᵘ,Xᵘ,Yᵘ,Aᵘ)
+      Aᵘ,Bᵘ     = _assemble_problem(aᵘ,bᵘ,assemᵘ,Xᵘ,Yᵘ,Aᵘ)
       ulₕ,plₕ,_ = _solve_problem(Aᵘ,Bᵘ,Xᵘ,ps)
 
       chk1 = √( ∑( ∫( ((υₕ-_υₕ)⋅(υₕ-_υₕ))*y )dΓ ) ) / √( ∑( ∫( (_υₕ⋅_υₕ)*y )dΓ ) )
@@ -553,26 +559,64 @@ function surface_bulk_viscous_flows_axisymmetric(
 
     end
 
+    msₕ = get_maximum_magnitude_with_dirichlet(υₕ)
+
+    aυₕ = ( ∑( ∫( (ulₕ⋅VectorValue(1.0,0.0))*y )dΩˡ ) / ∑( ∫( y )dΩˡ ) ) * VectorValue(1.0,0.0)
+     υₕ =  υₕ - aυₕ
+    ulₕ = ulₕ - aυₕ
+    @show aυₕ
+
     # Compute averages in the meridian
     dS = buffer[].dS
     dΣ = buffer[].dΣ
 
-    uʳ(x) = x[2] > 0.0 ? ulₕ(x) : ulₕ(Point(x[1],-x[2]))
-    rˢ(x) = x - cˢ
-    rᵇ(x) = x - cᵇ
+    Σˢ = dS.quad.trian
+    Σᵇ = dΣ.quad.trian
 
-    # Verify sign of r's and order
-    # Verify output of rotation
+    Vˢ = TestFESpace(Σˢ,reffeᵘ)
+    Vᵇ = TestFESpace(Σᵇ,reffeᵘ)
+    
+    _uʳ(x) = x[2] > 0.0 ? ulₕ(x) : 
+      VectorValue(ulₕ(Point(x[1],-x[2]))⋅VectorValue(1.0,0.0),
+             -1.0*ulₕ(Point(x[1],-x[2]))⋅VectorValue(0.0,1.0))
+     uˢ = interpolate_everywhere(x->_uʳ(x),Vˢ)
+     uᵇ = interpolate_everywhere(x->_uʳ(x),Vᵇ)
 
-    cˢ = cˢ + ( ∫( uʳ )dS / ∫( 1.0 )dS )
-    θˢ = θˢ + ( ∫( cross(rˢ,uʳ) )dS / ∫( 1.0 )dS )
-    cᵇ = cᵇ + ( ∫( uʳ )dΣ / ∫( 1.0 )dΣ )
-    θᵇ = θᵇ + ( ∫( cross(rᵇ,uʳ) )dΣ / ∫( 1.0 )dΣ )
+    _θˢ = θˢ
+    _θᵇ = θᵇ
+
+    xˢ(x) = x[1] - cˢ[1]
+    xᵇ(x) = x[1] - cᵇ[1]
+
+    θˢ = θˢ + Δt * ( ∑( ∫( curl(uˢ) )dS ) / ∑( ∫( 1.0 )dS ) )
+    θᵇ = θᵇ + Δt * ( ∑( ∫( curl(uᵇ) )dΣ ) / ∑( ∫( 1.0 )dΣ ) )
+
+    νˢ = 0.5 * ∑( ∫( uˢ )dS ) / ∑( ∫( 1.0 )dS )
+    νᵇ = 0.5 * ∑( ∫( uᵇ )dΣ ) / ∑( ∫( 1.0 )dΣ )
+
+    cˢ = cˢ + Δt * νˢ
+    cᵇ = cᵇ + Δt * νᵇ
+
+    @show νˢ
+    @show cˢ
+    @show θˢ,θˢ-_θˢ
+    
+    @show νᵇ
+    @show cᵇ
+    @show θᵇ,θᵇ-_θᵇ
 
     writesol && postprocess_all(φ,dΩˡ.quad.trian,dΩᶜ.quad.trian,
       eₕ,υₕ,ulₕ,plₕ,i=i,of=output_frequency,name=name)
 
-    msₕ = get_maximum_magnitude_with_dirichlet(υₕ)
+    ψˢ = buffer[].ψˢ
+    writesol && if ( i % output_frequency == 0 )
+      writevtk(Σˢ,name*"_rbs_$i",cellfields=["LS"=>ψˢ.φ,"curl"=>curl(uˢ)],nsubcells=4)
+    end
+
+    ψᵇ = buffer[].ψᵇ
+    writesol && if ( i % output_frequency == 0 )
+      writevtk(Σᵇ,name*"_rbb_$i",cellfields=["LS"=>ψᵇ.φ,"curl"=>curl(uᵇ)],nsubcells=4)
+    end
 
     i = i + 1
     t = t + Δt
@@ -580,11 +624,7 @@ function surface_bulk_viscous_flows_axisymmetric(
     Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ = 
       update_all!(i,t,Δt,υₕ,msₕ)
 
-    assemᵉ = SparseMatrixAssembler(Tm,Tv,Uᵉ,Vᵉ)
-    aᵉ,bᵉ = transport_problem_axisymmetric(
-      υₕ,eₕ,dΓ,dΩᶜ,nΓ,Δt,γᵉ,τᵈkₒ)
-    opᵉ = AffineFEOperator(aᵉ,bᵉ,Uᵉ,Vᵉ,assemᵉ)
-    eₕ = solve(ps,opᵉ)
+    eₕ  = interpolate_everywhere(x->_eₕ(x,t),Uᵉ)
 
   end
 

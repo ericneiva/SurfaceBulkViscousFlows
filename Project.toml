@@ -4,6 +4,8 @@ authors = ["Eric Neiva <eric.miranda-neiva@college-de-france.fr>"]
 version = "0.1.0"
 
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
 GridapEmbedded = "8838a6a3-0006-4405-b874-385995508d5d"
 GridapPETSc = "bcdc36c2-0c3e-11ea-095a-c9dadae499f1"
@@ -16,6 +18,8 @@ SparseMatricesCSR = "a0a7dd2c-ebf4-11e9-1f05-cf50bc540ca1"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [compat]
+CSV = "0.10.15"
+DataFrames = "1.7.0"
 Gridap = "0.18.8"
 GridapEmbedded = "0.9.5"
 GridapPETSc = "0.5.3"
