@@ -11,13 +11,13 @@ ls = AlgoimCallLevelSetFunction(
   x -> x[1]*x[1] + x[2]*x[2] - 1.0,
   x -> VectorValue( 2.0 * x[1], 2.0 * x[2] ) )
 
-Pe   = 1.0
+Pe   = 30.0
 τᵈkₒ = 1.0
 μˡ   = 1.0e-5
 R    = 1.0
 n    = 30
-Δt   = 0.025
-T    = 25.0
+Δt   = 0.001
+T    = 1.1
 center = VectorValue(0.0,0.0)
 x_axis = 0.2
 y_axis = 0.2

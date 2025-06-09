@@ -27,6 +27,6 @@ function mechanostability(U,X,Y,dΓ,dΩᶜ,nΓ)
 end
 
 function contraction_wave(U,X,Y,dΓ,dΩᶜ,nΓ)
-  eₐ = 0.8; Δe = 0.4; s₀ = -0.2;
-  (x,s) -> ( atan(x[2],x[1]) > min(max(0.0,s/25.0+s₀),0.8)*pi ) ? eₐ + Δe : eₐ
+  eₐ = 0.8; Δe = 0.4; s₀ = 0.0;
+  (x,s) -> ( atan(x[2],x[1]) > min(max(0.0,(s+s₀)*(s+s₀)),0.9*0.9)*pi ) ? eₐ + Δe : eₐ
 end
