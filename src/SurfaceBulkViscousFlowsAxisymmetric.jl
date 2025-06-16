@@ -23,6 +23,7 @@ function surface_bulk_viscous_flows_axisymmetric(
   # Background geometry
   cells   = (n,div(n,2))
   h       = (domain[2]-domain[1])/n
+  tol_red = h/10.0
   bgmodel = CartesianDiscreteModel(domain,cells)
   Ω       = Triangulation(bgmodel)
 
@@ -72,7 +73,7 @@ function surface_bulk_viscous_flows_axisymmetric(
 
       # Current time level set
       φ₋  = AlgoimCallLevelSetFunction(_φ₋,∇(_φ₋))
-      ( i % redistance_frequency == 0 ) && begin
+      ( ( i % redistance_frequency == 0 ) && ( _φ₋(Point(0.0,0.0)) < -(h/2.0+tol_red) ) ) && begin
         _φ₋ = compute_distance_fe_function(bgmodel,Vbg,φ₋,order,cppdegree=3)
         φ₋  = AlgoimCallLevelSetFunction(_φ₋,∇(_φ₋))
       end
@@ -221,29 +222,29 @@ function surface_bulk_viscous_flows_axisymmetric(
 
     for i in 1:maxiter
 
-      _υₕ = υₕ
-      _ulₕ = ulₕ
+      # _υₕ = υₕ
+      # _ulₕ = ulₕ
 
       aᵛ,bᵛ = cortical_flow_problem_axisymmetric(
         ulₕ,plₕ,eₕ,dΩᶜ,dΓ,nΓ,γʷ,Pe,μˡ,R,activity)
       Aᵛ,Bᵛ = _assemble_problem(aᵛ,bᵛ,assemᵛ,Xᵛ,Yᵛ,Aᵛ)
       υₕ,_ = _solve_problem(Aᵛ,Bᵛ,Xᵛ,ps)
 
-      aᵘ,bᵘ = bulk_flow_problem_axisymmetric(
-        υₕ,dΩˡ,dΓ,nΓ,μˡ,R,γᵅ,h)
-      Aᵘ,Bᵘ = _assemble_problem(aᵘ,bᵘ,assemᵘ,Xᵘ,Yᵘ,Aᵘ)
-      ulₕ,plₕ,_ = _solve_problem(Aᵘ,Bᵘ,Xᵘ,ps)
+      # aᵘ,bᵘ = bulk_flow_problem_axisymmetric(
+      #   υₕ,dΩˡ,dΓ,nΓ,μˡ,R,γᵅ,h)
+      # Aᵘ,Bᵘ = _assemble_problem(aᵘ,bᵘ,assemᵘ,Xᵘ,Yᵘ,Aᵘ)
+      # ulₕ,plₕ,_ = _solve_problem(Aᵘ,Bᵘ,Xᵘ,ps)
 
-      chk1 = √( ∑( ∫( ((υₕ-_υₕ)⋅(υₕ-_υₕ))*y )dΓ ) ) / √( ∑( ∫( (_υₕ⋅_υₕ)*y )dΓ ) )
-      chk2 = √( ∑( ∫( ((ulₕ-_ulₕ)⋅(ulₕ-_ulₕ))*y )dΓ ) ) / √( ∑( ∫( (_ulₕ⋅_ulₕ)*y )dΓ ) )
-      chk = max(chk1,chk2)
+      # chk1 = √( ∑( ∫( ((υₕ-_υₕ)⋅(υₕ-_υₕ))*y )dΓ ) ) / √( ∑( ∫( (_υₕ⋅_υₕ)*y )dΓ ) )
+      # chk2 = √( ∑( ∫( ((ulₕ-_ulₕ)⋅(ulₕ-_ulₕ))*y )dΓ ) ) / √( ∑( ∫( (_ulₕ⋅_ulₕ)*y )dΓ ) )
+      # chk = max(chk1,chk2)
 
-      @info "chk1 = $chk1 and chk2 = $chk2 at i = $i"
-      if chk < reltol
-        break
-      elseif i == maxiter
-        error("No convergence")
-      end
+      # @info "chk1 = $chk1 and chk2 = $chk2 at i = $i"
+      # if chk < reltol
+      #   break
+      # elseif i == maxiter
+      #   error("No convergence")
+      # end
 
     end
 
@@ -257,6 +258,9 @@ function surface_bulk_viscous_flows_axisymmetric(
 
     Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ = 
       update_all!(i,t,Δt,υₕ,msₕ)
+
+    ulₕ = interpolate_everywhere(_uₕ,Xᵘ[1])
+    plₕ = interpolate_everywhere(_pₕ,Xᵘ[2])
 
     assemᵉ = SparseMatrixAssembler(Tm,Tv,Uᵉ,Vᵉ)
     aᵉ,bᵉ = transport_problem_axisymmetric(
@@ -625,26 +629,30 @@ function surface_bulk_viscous_flows_axisymmetric(
     θΓ = vcat(θΓ...)
 
     vΓ = lazy_map(υₕ,xΓ)
+    eΓ = lazy_map(eₕ,xΓ)
 
-    xΓ = vcat(xΓ...)
+    xΓ  = vcat(xΓ...)
     xxΓ = map(x->x.data[1],xΓ)
     xyΓ = map(x->x.data[2],xΓ)
   
-    vΓ = vcat(vΓ...)
+    vΓ  = vcat(vΓ...)
     nvΓ = map(x->norm(x),vΓ)
-    
+    eΓ  = vcat(eΓ...)
+     
     perm = sortperm(θΓ)
-    θΓ = θΓ[perm]
+    θΓ  = θΓ[perm]
     xxΓ = xxΓ[perm]
     xyΓ = xyΓ[perm]
     nvΓ = nvΓ[perm]
+    eΓ  = eΓ[perm]
 
     xxΓ = vcat(xxΓ,reverse(xxΓ))
     xyΓ = vcat(xyΓ,-1.0 .* reverse(xyΓ))
     nvΓ = vcat(nvΓ,-1.0 .* reverse(nvΓ))
-    θΓ = vcat(θΓ,2*π .- reverse(θΓ))
+    θΓ  = vcat(θΓ,2*π .- reverse(θΓ))
+    eΓ  = vcat(eΓ,reverse(eΓ))
     
-    cds = DataFrame("x"=>xxΓ,"y"=>xyΓ,"v"=>nvΓ,"theta"=>θΓ)
+    cds = DataFrame("x"=>xxΓ,"y"=>xyΓ,"v"=>nvΓ,"theta"=>θΓ,"e"=>eΓ)
     CSV.write("examples/OocyteAndSpindle/results/results_$i.csv",cds)
 
     i = i + 1
