@@ -26,7 +26,16 @@ function mechanostability(U,X,Y,dΓ,dΩᶜ,nΓ)
   _eₕ = 1.0 + _eₕ
 end
 
+function bistable_wave(U,X,Y,dΓ,dΩᶜ,nΓ)
+  eₐ = 0.8; Δe = 0.4; s₀ = 0.0; κ = 10
+  θ(s) = min((s+s₀)^(3/2),0.85^(3/2))*pi
+  H(x,s) = 1.0 / ( 1.0 + exp( - 2.0 * κ * ( atan(x[2],x[1]) - θ(s) ) ) )
+  (x,s) -> eₐ + Δe * H(x,s)
+end
+
 function contraction_wave(U,X,Y,dΓ,dΩᶜ,nΓ)
-  eₐ = 0.8; Δe = 0.4; s₀ = 0.0;
-  (x,s) -> ( atan(x[2],x[1]) > min(max(0.0,(s+s₀)*(s+s₀)),0.9*0.9)*pi ) ? eₐ + Δe : eₐ
+  eₐ = 0.8; Δe = 0.4; s₀ = 0.0; ω = 0.2
+  θ(s) = min((s+s₀)^(3/2),0.9^(3/2))*pi
+  (x,s) -> ( eₐ + Δe * ( exp( -(atan(x[2],x[1]) - θ(s)) * 
+    (atan(x[2],x[1]) - θ(s)) / ( 2.0 * pi * pi * ω * ω ) ) ) )
 end

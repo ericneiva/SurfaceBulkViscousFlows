@@ -28,28 +28,33 @@ for i,file in enumerate(files):
     second_column = df.iloc[1:, 1]
     third_column  = df.iloc[1:, 2]
     fourth_column = df.iloc[1:, 3]
+    fifth_column  = df.iloc[1:, 4]
 
     # Convert the pandas Series to numpy arrays
     first_column_np  = np.array(first_column.values)
     second_column_np = np.array(second_column.values)
     third_column_np  = np.array(third_column.values)
     fourth_column_np = np.array(fourth_column.values)
+    fifth_column_np  = np.array(fifth_column.values)
 
     # Convert the numpy array of strings to double floats
     first_column_np  = first_column_np.astype(np.float64)
     second_column_np = second_column_np.astype(np.float64)
     third_column_np  = third_column_np.astype(np.float64)
     fourth_column_np = fourth_column_np.astype(np.float64)
+    fifth_column_np  = fifth_column_np.astype(np.float64)
 
-    x = first_column_np
-    y = second_column_np
-    v = third_column_np
+    x     = first_column_np
+    y     = second_column_np
+    v     = third_column_np
     theta = fourth_column_np
+    e     = fifth_column_np
 
     # Compute radius and deviation
     r      = np.sqrt(x**2 + y**2)
     r_mean = np.mean(r)
     r_dev  = 100 * (r - r_mean) / r_mean
+    e      = e - 1.0
 
     # Interpolate to common length
     orig_theta   = theta
@@ -57,16 +62,19 @@ for i,file in enumerate(files):
     r_interp     = np.interp(common_theta, orig_theta, r)
     rdev_interp  = np.interp(common_theta, orig_theta, r_dev)
     nvel_interp  = np.interp(common_theta, orig_theta, v)
+    e_interp     = np.interp(common_theta, orig_theta, e)
 
     # Compute radii
     if i == 0:
         radii = r_interp
         rdevs = rdev_interp
         nvels = nvel_interp
+        evals = e_interp
     else:
         radii = np.vstack((radii, r_interp))
         rdevs = np.vstack((rdevs, rdev_interp))
         nvels = np.vstack((nvels, nvel_interp))
+        evals = np.vstack((evals, e_interp))
 
 # RADII
 
@@ -74,16 +82,16 @@ plt.figure('Kymograph')
 fig, axs = plt.subplots(1,1)
 fig.suptitle('Kymograph of Simulated Contour Coordinates')
 
-times = np.arange(1100,-1,-1)
+times = np.arange(1000,-1,-1)
 angles = np.linspace(0, 360, common_size, endpoint=False)
 
 axs.pcolormesh(angles, times, rdevs, cmap='viridis')
 axs.set_ylabel('Time',labelpad=-20)
 axs.set_xlabel('2D polar angle (non x-axis-aligned)',labelpad=30)
-xticks = np.arange(0,301,75)
+xticks = np.arange(0,361,90)
 xlabels = ['0', '90', '180', '270', '360']
 axs.xaxis.set_ticks(xticks,xlabels)
-yticks = np.arange(0,1101,1100)
+yticks = np.arange(0,1001,1000)
 ylabels = ['P1', 'BD+8H']
 axs.yaxis.set_ticks(yticks,ylabels)
 axs.collections[0].set_clim(-4.75, 4.75)
@@ -105,22 +113,22 @@ plt.savefig('kymograph_radii.png',dpi=200)
 
 plt.figure('Kymograph')
 fig, axs = plt.subplots(1,1)
-fig.suptitle('Kymograph of Simulated Contour Coordinates')
+fig.suptitle('Kymograph of Simulated Velocities')
 
-times = np.arange(1100,-1,-1)
+times = np.arange(1000,-1,-1)
 angles = np.linspace(0, 360, common_size, endpoint=False)
 
 axs.pcolormesh(angles, times, nvels, cmap='viridis')
 axs.set_ylabel('Time',labelpad=-20)
 axs.set_xlabel('2D polar angle (non x-axis-aligned)',labelpad=30)
-xticks = np.arange(0,301,75)
+xticks = np.arange(0,361,90)
 xlabels = ['0', '90', '180', '270', '360']
 axs.xaxis.set_ticks(xticks,xlabels)
-yticks = np.arange(0,1101,1100)
+yticks = np.arange(0,1001,1000)
 ylabels = ['P1', 'BD+8H']
 axs.yaxis.set_ticks(yticks,ylabels)
 cbar = fig.colorbar(axs.collections[0], ax=axs)
-cbar.ax.set_ylabel('Deviation from mean radius (%)',rotation=-90,labelpad=15)
+cbar.ax.set_ylabel('Velocity magnitude',rotation=-90,labelpad=15)
 
 im = plt.imread(os.path.join(working_path,'Polar_graph_paper.png'), format='png')
 
@@ -132,6 +140,38 @@ plt.subplots_adjust(bottom=0.25,right=1.0,top=0.9,left=0.1)
 
 # plt.show()
 plt.savefig('kymograph_velocities.png',dpi=200)
+
+# SPECIES
+
+plt.figure('Kymograph')
+fig, axs = plt.subplots(1,1)
+fig.suptitle('Kymograph of Molecular Species')
+
+times = np.arange(1000,-1,-1)
+angles = np.linspace(0, 360, common_size, endpoint=False)
+
+axs.pcolormesh(angles, times, evals, cmap='viridis')
+axs.set_ylabel('Time',labelpad=-20)
+axs.set_xlabel('2D polar angle (non x-axis-aligned)',labelpad=30)
+xticks = np.arange(0,361,90)
+xlabels = ['0', '90', '180', '270', '360']
+axs.xaxis.set_ticks(xticks,xlabels)
+yticks = np.arange(0,1001,1000)
+ylabels = ['P1', 'BD+8H']
+axs.yaxis.set_ticks(yticks,ylabels)
+cbar = fig.colorbar(axs.collections[0], ax=axs)
+cbar.ax.set_ylabel('Deviation from equilibrium concentration',rotation=-90,labelpad=15)
+
+im = plt.imread(os.path.join(working_path,'Polar_graph_paper.png'), format='png')
+
+newax = fig.add_axes([0.63, 0.01, 0.18, 0.18], anchor='E', zorder=1)
+newax.imshow(im)
+newax.axis('off')
+
+plt.subplots_adjust(bottom=0.25,right=1.0,top=0.9,left=0.1)
+
+# plt.show()
+plt.savefig('kymograph_species.png',dpi=200)
 
 # References
 # https://community.altair.com/community/en/magnitude-and-phase-angle-of-a-discrete-fourier-transform-dft-function?id=kb_article_view&sysparm_article=KB0121083&sys_kb_id=3d0dfd2b97839d50e3b0361e6253af39&spa=1
