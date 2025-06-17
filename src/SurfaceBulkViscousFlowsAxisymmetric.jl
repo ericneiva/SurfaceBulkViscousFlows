@@ -141,7 +141,7 @@ function surface_bulk_viscous_flows_axisymmetric(
     # Test FE spaces
 
     ## (u,p)-bulk
-    Vstdᵘˡ = TestFESpace(Ωˡ,reffeᵘ,dirichlet_tags=["boundary"],
+    Vstdᵘˡ = TestFESpace(Ωˡ,reffeᵘ,dirichlet_tags=[5],
                                    dirichlet_masks=[(false,true)])
     Vserᵘˡ = TestFESpace(Ωˡ,reffeˢ,conformity=:L2)
     Vᵘˡ    = AgFEMSpace(Vstdᵘˡ,aggsˡ,Vserᵘˡ)
@@ -222,29 +222,29 @@ function surface_bulk_viscous_flows_axisymmetric(
 
     for i in 1:maxiter
 
-      # _υₕ = υₕ
-      # _ulₕ = ulₕ
+      _υₕ = υₕ
+      _ulₕ = ulₕ
 
       aᵛ,bᵛ = cortical_flow_problem_axisymmetric(
         ulₕ,plₕ,eₕ,dΩᶜ,dΓ,nΓ,γʷ,Pe,μˡ,R,activity)
       Aᵛ,Bᵛ = _assemble_problem(aᵛ,bᵛ,assemᵛ,Xᵛ,Yᵛ,Aᵛ)
       υₕ,_ = _solve_problem(Aᵛ,Bᵛ,Xᵛ,ps)
 
-      # aᵘ,bᵘ = bulk_flow_problem_axisymmetric(
-      #   υₕ,dΩˡ,dΓ,nΓ,μˡ,R,γᵅ,h)
-      # Aᵘ,Bᵘ = _assemble_problem(aᵘ,bᵘ,assemᵘ,Xᵘ,Yᵘ,Aᵘ)
-      # ulₕ,plₕ,_ = _solve_problem(Aᵘ,Bᵘ,Xᵘ,ps)
+      aᵘ,bᵘ = bulk_flow_problem_axisymmetric(
+        υₕ,dΩˡ,dΓ,nΓ,μˡ,R,γᵅ,h)
+      Aᵘ,Bᵘ = _assemble_problem(aᵘ,bᵘ,assemᵘ,Xᵘ,Yᵘ,Aᵘ)
+      ulₕ,plₕ,_ = _solve_problem(Aᵘ,Bᵘ,Xᵘ,ps)
 
-      # chk1 = √( ∑( ∫( ((υₕ-_υₕ)⋅(υₕ-_υₕ))*y )dΓ ) ) / √( ∑( ∫( (_υₕ⋅_υₕ)*y )dΓ ) )
-      # chk2 = √( ∑( ∫( ((ulₕ-_ulₕ)⋅(ulₕ-_ulₕ))*y )dΓ ) ) / √( ∑( ∫( (_ulₕ⋅_ulₕ)*y )dΓ ) )
-      # chk = max(chk1,chk2)
+      chk1 = √( ∑( ∫( ((υₕ-_υₕ)⋅(υₕ-_υₕ))*y )dΓ ) ) / √( ∑( ∫( (_υₕ⋅_υₕ)*y )dΓ ) )
+      chk2 = √( ∑( ∫( ((ulₕ-_ulₕ)⋅(ulₕ-_ulₕ))*y )dΓ ) ) / √( ∑( ∫( (_ulₕ⋅_ulₕ)*y )dΓ ) )
+      chk = max(chk1,chk2)
 
-      # @info "chk1 = $chk1 and chk2 = $chk2 at i = $i"
-      # if chk < reltol
-      #   break
-      # elseif i == maxiter
-      #   error("No convergence")
-      # end
+      @info "chk1 = $chk1 and chk2 = $chk2 at i = $i"
+      if chk < reltol
+        break
+      elseif i == maxiter
+        error("No convergence")
+      end
 
     end
 
@@ -258,9 +258,6 @@ function surface_bulk_viscous_flows_axisymmetric(
 
     Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ = 
       update_all!(i,t,Δt,υₕ,msₕ)
-
-    ulₕ = interpolate_everywhere(_uₕ,Xᵘ[1])
-    plₕ = interpolate_everywhere(_pₕ,Xᵘ[2])
 
     assemᵉ = SparseMatrixAssembler(Tm,Tv,Uᵉ,Vᵉ)
     aᵉ,bᵉ = transport_problem_axisymmetric(
