@@ -65,14 +65,73 @@ function transport_problem_axisymmetric(u,eₕ,dΓ,dΩᶜ,nΓ,
   aᵉ,bᵉ
 end
 
-function transport_problem_axisymmetric(u,eₕ,dΓ,nΓ,γⁿ::Float64,
+function bulk_flow_problem(
+  υ,dΩ,dΓ,nΓ,μˡ::Float64,R::Float64,γ::Float64,h::Float64)
+
+  aᵇ(u,v) = ∫( 2.0 * μˡ * R * (ε(u)⊙ε(v)) )dΩ
+
+  bᵇ(v,q) = ∫( q*(∇⋅v) )dΩ
+
+  σᵘ(ε,q) = 2.0 * μˡ * R * ε - q * one(ε)
+  αˡ(u,v,p,q) = ∫( (γ/h)*(u⋅v)           -
+                    u⋅((σᵘ∘(ε(v),q))⋅nΓ) -
+                    v⋅((σᵘ∘(ε(u),p))⋅nΓ) )dΓ
+  αʳ(v,q,υ) = ∫( (γ/h)*(υ⋅v) - υ⋅((σᵘ∘(ε(v),q))⋅nΓ) )dΓ
+
+  r(p,ℓ) = ∫( p*ℓ )dΩ
+
+  aᵘ((uˡ,pˡ,l),(vˡ,qˡ,ℓ)) = 
+    aᵇ(uˡ,vˡ) - bᵇ(vˡ,pˡ) - bᵇ(uˡ,qˡ) + 
+    αˡ(uˡ,vˡ,pˡ,qˡ) + r(pˡ,ℓ) + r(qˡ,l)
+  bᵘ((vˡ,qˡ,l)) = αʳ(vˡ,qˡ,υ)
+
+  aᵘ, bᵘ
+end
+
+function cortical_flow_problem_2D(ulₕ,plₕ,eₕ,dΩᶜ,dΓ,nΓ,
+    γ::Float64,Pe::Float64,μˡ::Float64,R::Float64,ξ₀::Function)
+
+  β = 0.001
+  aʷ(υ,μ) = ∫( 2.0 * ( εᶜ(υ,nΓ)⊙εᵈ(μ,nΓ) ) + β * (υ⋅μ) )dΓ
+
+  ξ(e) = 2.0 * e*e / ( 1.0 + e*e )
+
+  f(μ,e) = ∫( Pe * ( -(divᶜ(μ,nΓ))*(ξ∘(e)) ) * ξ₀ )dΓ
+
+  σᵘ(ε,q) = 2.0 * μˡ * R * ε - q * one(ε)
+  βʳ(μ,u,p) = ∫( μ⋅((σᵘ∘(ε(u),p))⋅nΓ) )dΓ
+
+  sᵘ(υ,μ) = ∫( γ*((nΓ⋅ε(υ))⊙(nΓ⋅ε(μ))) )dΩᶜ
+
+  RB¹ = VectorValue(1.0,0.0)
+  RB² = VectorValue(0.0,1.0)
+  RB³ = x -> VectorValue(-x[2],x[1])
+
+  r¹(u,ℓ) = ∫( (u⋅RB¹)*ℓ )dΓ
+  r²(u,ℓ) = ∫( (u⋅RB²)*ℓ )dΓ
+  r³(u,ℓ) = ∫( (u⋅RB³)*ℓ )dΓ
+  r⁴(u,ℓ) = ∫( (u⋅nΓ )*ℓ )dΓ
+
+  aᵛ((υ,l¹,l²,l³,l⁴),(μ,ℓ¹,ℓ²,ℓ³,ℓ⁴)) =
+    aʷ(υ,μ) + sᵘ(υ,μ) + 
+    r¹(υ,ℓ¹) + r¹(μ,l¹) + r²(υ,ℓ²) + r²(μ,l²) +
+    r³(υ,ℓ³) + r³(μ,l³) + r⁴(υ,ℓ⁴) + r⁴(μ,l⁴)
+  bᵛ((μ,ℓ¹,ℓ²,ℓ³,ℓ⁴)) = f(μ,eₕ) - βʳ(μ,ulₕ,plₕ)
+
+  aᵛ, bᵛ
+end
+
+bulk_flow_problem_2D(υ,dΩ,dΓ,nΓ,μˡ,R,γ,h) =
+  bulk_flow_problem(υ,dΩ,dΓ,nΓ,μˡ,R,γ,h)
+
+function transport_problem_2D(u,eₕ,dΓ,nΓ,γⁿ::Float64,
     dΩᶜ,γ¹::Float64,dΛ,nΛ,τᵈkₒ::Float64,dt::Float64)
   
-  m(e,ε) = ∫( (1/dt)*(e*ε)*y )dΓ
-  d(e,ε) = ∫( ( ∇ᵈ(e,nΓ)⋅∇ᵈ(ε,nΓ) )*y )dΓ
-  c(e,ε) = ∫( ( (u⋅∇ᵈ(e,nΓ))*ε + (tr(∇ᵈ(u,nΓ))+u⋅iy)*(e*ε) )*y )dΓ
-  r(e,ε) = ∫( τᵈkₒ*(e*ε)*y )dΓ
-  l(ε)   = ∫( τᵈkₒ*ε*y )dΓ
+  m(e,ε) = ∫( (1/dt)*(e*ε) )dΓ
+  d(e,ε) = ∫( ∇ᵈ(e,nΓ)⋅∇ᵈ(ε,nΓ) )dΓ
+  c(e,ε) = ∫( ( (u⋅∇ᵈ(e,nΓ))*ε + (tr(∇ᵈ(u,nΓ)))*(e*ε) ) )dΓ
+  r(e,ε) = ∫( τᵈkₒ*(e*ε) )dΓ
+  l(ε)   = ∫( τᵈkₒ*ε )dΓ
   
   sⁿ(υ,μ) = ∫( γⁿ*((nΓ⋅∇(υ))⊙(nΓ⋅∇(μ))) )dΩᶜ
   s¹(υ,μ) = ∫( γ¹*(jump(nΛ⋅∇(υ))*jump(nΛ⋅∇(μ))) )dΛ
@@ -124,28 +183,8 @@ function cortical_flow_problem_3D(ulₕ,plₕ,eₕ,dΩᶜ,dΓ,nΓ,
   aᵛ, bᵛ
 end
 
-function bulk_flow_problem_3D(
-  υ,dΩ,dΓ,nΓ,μˡ::Float64,R::Float64,γ::Float64,h::Float64)
-
-  aᵇ(u,v) = ∫( 2.0 * μˡ * R * (ε(u)⊙ε(v)) )dΩ
-
-  bᵇ(v,q) = ∫( q*(∇⋅v) )dΩ
-
-  σᵘ(ε,q) = 2.0 * μˡ * R * ε - q * one(ε)
-  αˡ(u,v,p,q) = ∫( (γ/h)*(u⋅v)           -
-                    u⋅((σᵘ∘(ε(v),q))⋅nΓ) -
-                    v⋅((σᵘ∘(ε(u),p))⋅nΓ) )dΓ
-  αʳ(v,q,υ) = ∫( (γ/h)*(υ⋅v) - υ⋅((σᵘ∘(ε(v),q))⋅nΓ) )dΓ
-
-  r(p,ℓ) = ∫( p*ℓ )dΩ
-
-  aᵘ((uˡ,pˡ,l),(vˡ,qˡ,ℓ)) = 
-    aᵇ(uˡ,vˡ) - bᵇ(vˡ,pˡ) - bᵇ(uˡ,qˡ) + 
-    αˡ(uˡ,vˡ,pˡ,qˡ) + r(pˡ,ℓ) + r(qˡ,l)
-  bᵘ((vˡ,qˡ,l)) = αʳ(vˡ,qˡ,υ)
-
-  aᵘ, bᵘ
-end
+bulk_flow_problem_3D(υ,dΩ,dΓ,nΓ,μˡ,R,γ,h) =
+  bulk_flow_problem(υ,dΩ,dΓ,nΓ,μˡ,R,γ,h)
 
 function transport_problem_3D(u,eₕ,dΓ,dΩᶜ,nΓ,
     dt::Float64,γ::Float64,τᵈkₒ::Float64)

@@ -1,4 +1,4 @@
-function surface_bulk_viscous_flows_3D(
+function surface_bulk_viscous_flows_2D(
             domain::Tuple{Vararg{Float64}},
             ls::AlgoimCallLevelSetFunction,
             Pe::Float64,
@@ -21,10 +21,10 @@ function surface_bulk_viscous_flows_3D(
             name::String = "plt")
 
   # Background geometry
-  cells = (n,n,n)
-  h = (domain[2]-domain[1])/n
+  cells   = (n,n)
+  h       = (domain[2]-domain[1])/n
   bgmodel = CartesianDiscreteModel(domain,cells)
-  Ω = Triangulation(bgmodel)
+  Ω       = Triangulation(bgmodel)
 
   # Buffer of active model and integration objects
   degree = order < 3 ? 3 : 2*order
@@ -59,11 +59,11 @@ function surface_bulk_viscous_flows_3D(
       else
         cp₋₂ = buffer[].cp₋
         φ₋₂  = buffer[].φ₋
-        __φ = get_free_dof_values(φ₋₂.φ)
-        Ωⱽ  = get_triangulation(Vbg)
-        _ϕ₋ = compute_normal_displacement(cp₋₂,φ₋₂,v₋₂,dt,Ωⱽ)
-        ϕ₋  = __φ - _ϕ₋
-        _φ₋ = FEFunction(Vbg,ϕ₋)
+        __φ  = get_free_dof_values(φ₋₂.φ)
+        Ωⱽ   = get_triangulation(Vbg)
+        _ϕ₋  = compute_normal_displacement(cp₋₂,φ₋₂,v₋₂,dt,Ωⱽ)
+        ϕ₋   = __φ - _ϕ₋
+        _φ₋  = FEFunction(Vbg,ϕ₋)
       end
 
       # Current time level set
@@ -100,7 +100,7 @@ function surface_bulk_viscous_flows_3D(
 
       # Update buffer
       buffer[] = ( Ωᶜ=Ωᶜ,dΩᶜ=dΩᶜ,Ωˡ=Ωˡ,dΩˡ=dΩˡ,aggsˡ=aggsˡ,
-                    dΓ=dΓ,nΓ=nΓ,cp₋=cp₋,φ₋=φ₋,t=t,Vbg=Vbg )
+                   dΓ=dΓ,nΓ=nΓ,cp₋=cp₋,φ₋=φ₋,t=t,Vbg=Vbg )
       return true
 
     end
@@ -119,11 +119,12 @@ function surface_bulk_viscous_flows_3D(
 
     update_buffer!(i,t,dt,disp,val)
 
-    # Triangulations and aggregates
+    # Triangulations
     Ωˡ = buffer[].Ωˡ
     Ωᶜ = buffer[].Ωᶜ
 
-    aggsˡ    = buffer[].aggsˡ
+    # Aggregates
+    aggsˡ = buffer[].aggsˡ
 
     # Measures and normal
     dΩˡ = buffer[].dΩˡ
@@ -132,14 +133,19 @@ function surface_bulk_viscous_flows_3D(
     nΓ  = buffer[].nΓ
     φ   = buffer[].φ₋
 
+    # Ghost skeleton
+    Λ  = SkeletonTriangulation(Ωᶜ)
+    dΛ = Measure(Λ,2*order)
+    nΛ = get_normal_vector(Λ)
+
     # Test FE spaces
 
     ## (u,p)-bulk
     Vstdᵘˡ = TestFESpace(Ωˡ,reffeᵘ)
     Vserᵘˡ = TestFESpace(Ωˡ,reffeˢ,conformity=:L2)
-    Vᵘˡ = AgFEMSpace(Vstdᵘˡ,aggsˡ,Vserᵘˡ)
+    Vᵘˡ    = AgFEMSpace(Vstdᵘˡ,aggsˡ,Vserᵘˡ)
     Vstdᵖˡ = TestFESpace(Ωˡ,reffeᵖ)
-    Vᵖˡ = AgFEMSpace(Vstdᵖˡ,aggsˡ)
+    Vᵖˡ    = AgFEMSpace(Vstdᵖˡ,aggsˡ)
 
     # u-surface
     Vʷ = TestFESpace(Ωᶜ,reffeʷ)
@@ -151,42 +157,41 @@ function surface_bulk_viscous_flows_3D(
     # Trial FE spaces
     Uᵘˡ = TrialFESpace(Vᵘˡ)
     Uᵖˡ = TrialFESpace(Vᵖˡ)
-    Uʷ = TrialFESpace(Vʷ)
-    Uᵉ = TrialFESpace(Vᵉ)
-    Uˡ = TrialFESpace(Vˡ)
+    Uʷ  = TrialFESpace(Vʷ)
+    Uᵉ  = TrialFESpace(Vᵉ)
+    Uˡ  = TrialFESpace(Vˡ)
 
     # Multifield FE spaces
-    Yᵛ = MultiFieldFESpace([Vʷ,Vˡ,Vˡ,Vˡ,Vˡ,Vˡ,Vˡ,Vˡ])
-    Xᵛ = MultiFieldFESpace([Uʷ,Uˡ,Uˡ,Uˡ,Uˡ,Uˡ,Uˡ,Uˡ])
+    Yᵛ = MultiFieldFESpace([Vʷ,Vˡ,Vˡ,Vˡ,Vˡ])
+    Xᵛ = MultiFieldFESpace([Uʷ,Uˡ,Uˡ,Uˡ,Uˡ])
     Yᵘ = MultiFieldFESpace([Vᵘˡ,Vᵖˡ,Vˡ])
     Xᵘ = MultiFieldFESpace([Uᵘˡ,Uᵖˡ,Uˡ])
 
     Yʳ = MultiFieldFESpace([Vᵉ,Vˡ])
     Xʳ = MultiFieldFESpace([Uᵉ,Uˡ])
 
-    Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ
+    Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ,dΛ,nΛ
 
   end
 
   # Time discretisation parameters
   t₀ = 0.0
   Δt = Δt₀
-  u₀ = VectorValue(0.0,0.0,0.0)
+  u₀ = VectorValue(0.0,0.0)
   m₀ = 2.0
 
-  Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ = update_all!(0,t₀,Δt,u₀,m₀)
+  Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ,dΛ,nΛ = 
+    update_all!(0,t₀,Δt,u₀,m₀)
 
   # *** WEAK FORM PARAMETERS ***
   ξ(e) = 2.0 * e*e / ( 1.0 + e*e )
   # ** u-stabilisation **
   γʷ = γᶜ/h
-  # ** e-stabilisation **
-  γᵉ = γᶜ/h
 
   _eₕ = initial_density(Uᵉ,Xʳ,Yʳ,dΓ,dΩᶜ,nΓ)
   eₕ = interpolate_everywhere(_eₕ,Uᵉ)
   
-  _uₕ(x) = VectorValue(0.0,0.0,0.0)
+  _uₕ(x) = VectorValue(0.0,0.0)
   _pₕ(x) = 0.0
 
   ulₕ = interpolate_everywhere(_uₕ,Xᵘ[1])
@@ -217,18 +222,18 @@ function surface_bulk_viscous_flows_3D(
       _υₕ = υₕ
       _ulₕ = ulₕ
 
-      aᵛ,bᵛ = cortical_flow_problem_3D(
+      aᵛ,bᵛ = cortical_flow_problem_2D(
         ulₕ,plₕ,eₕ,dΩᶜ,dΓ,nΓ,γʷ,Pe,μˡ,R,activity)
       Aᵛ,Bᵛ = _assemble_problem(aᵛ,bᵛ,assemᵛ,Xᵛ,Yᵛ,Aᵛ)
       υₕ,_ = _solve_problem(Aᵛ,Bᵛ,Xᵛ,ps)
 
-      aᵘ,bᵘ = bulk_flow_problem_3D(υₕ,dΩˡ,dΓ,nΓ,μˡ,R,γᵅ,h)
+      aᵘ,bᵘ = bulk_flow_problem_2D(υₕ,dΩˡ,dΓ,nΓ,μˡ,R,γᵅ,h)
       Aᵘ,Bᵘ = _assemble_problem(aᵘ,bᵘ,assemᵘ,Xᵘ,Yᵘ,Aᵘ)
       ulₕ,plₕ,_ = _solve_problem(Aᵘ,Bᵘ,Xᵘ,ps)
 
       chk1 = √( ∑( ∫( (υₕ-_υₕ)⋅(υₕ-_υₕ) )dΓ ) ) / √( ∑( ∫( _υₕ⋅_υₕ )dΓ ) )
       chk2 = √( ∑( ∫( (ulₕ-_ulₕ)⋅(ulₕ-_ulₕ) )dΓ ) ) / √( ∑( ∫( _ulₕ⋅_ulₕ )dΓ ) )
-      chk = max(chk1,chk2)
+      chk  = max(chk1,chk2)
 
       @info "chk1 = $chk1 and chk2 = $chk2 at i = $i"
       if chk < reltol
@@ -242,16 +247,22 @@ function surface_bulk_viscous_flows_3D(
     writesol && postprocess_all(φ,dΩˡ.quad.trian,dΩᶜ.quad.trian,
       eₕ,υₕ,ulₕ,plₕ,i=i,of=output_frequency,name=name)
 
-    msₕ = get_maximum_magnitude_3D(υₕ)
+    msₕ = get_maximum_magnitude_with_dirichlet(υₕ)
 
     i = i + 1
     t = t + Δt
 
-    Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ = 
+    Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ,dΛ,nΛ = 
       update_all!(i,t,Δt,υₕ,msₕ)
 
+    # ** e-stabilisation **
+    δ = 2.0 * msₕ * Δt
+    γⁿ = γᶜ * ( msₕ + 1.0 / ( δ + h ) )
+    γ¹ = γᶜ * msₕ * h
+    @show msₕ, δ, γʷ, γⁿ, γ¹
+
     assemᵉ = SparseMatrixAssembler(Tm,Tv,Uᵉ,Vᵉ)
-    aᵉ,bᵉ = transport_problem_3D(υₕ,eₕ,dΓ,dΩᶜ,nΓ,Δt,γᵉ,τᵈkₒ)
+    aᵉ,bᵉ = transport_problem_2D(υₕ,eₕ,dΓ,nΓ,γⁿ,dΩᶜ,γ¹,dΛ,nΛ,τᵈkₒ,Δt)
     opᵉ = AffineFEOperator(aᵉ,bᵉ,Uᵉ,Vᵉ,assemᵉ)
     eₕ = solve(ps,opᵉ)
 

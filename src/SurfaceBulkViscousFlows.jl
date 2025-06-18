@@ -30,6 +30,7 @@ include("WeakForms.jl")
 
 include("SurfaceBulkInSphere.jl")
 include("SurfaceBulkViscousFlowsAxisymmetric.jl")
+include("SurfaceBulkViscousFlows2D.jl")
 include("SurfaceBulkViscousFlows3D.jl")
 
 export unit_density
@@ -39,10 +40,13 @@ export bistable_wave
 export contraction_wave
 
 export contractile_ring_axisymmetric
+export contractile_ring_2D
 export contractile_ring_3D
 
 export surface_bulk_in_sphere_axisymmetric
+
 export surface_bulk_viscous_flows_axisymmetric
+export surface_bulk_viscous_flows_2D
 export surface_bulk_viscous_flows_3D
 
 end # module SurfaceBulkViscousFlows
