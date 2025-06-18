@@ -65,6 +65,24 @@ function transport_problem_axisymmetric(u,eₕ,dΓ,dΩᶜ,nΓ,
   aᵉ,bᵉ
 end
 
+function transport_problem_axisymmetric(u,eₕ,dΓ,nΓ,γⁿ::Float64,
+    dΩᶜ,γ¹::Float64,dΛ,nΛ,τᵈkₒ::Float64,dt::Float64)
+  
+  m(e,ε) = ∫( (1/dt)*(e*ε)*y )dΓ
+  d(e,ε) = ∫( ( ∇ᵈ(e,nΓ)⋅∇ᵈ(ε,nΓ) )*y )dΓ
+  c(e,ε) = ∫( ( (u⋅∇ᵈ(e,nΓ))*ε + (tr(∇ᵈ(u,nΓ))+u⋅iy)*(e*ε) )*y )dΓ
+  r(e,ε) = ∫( τᵈkₒ*(e*ε)*y )dΓ
+  l(ε)   = ∫( τᵈkₒ*ε*y )dΓ
+  
+  sⁿ(υ,μ) = ∫( γⁿ*((nΓ⋅∇(υ))⊙(nΓ⋅∇(μ))) )dΩᶜ
+  s¹(υ,μ) = ∫( γ¹*(jump(nΛ⋅∇(υ))*jump(nΛ⋅∇(μ))) )dΛ
+
+  aᵉ(e,ε) = m(e,ε) + c(e,ε) + r(e,ε) + d(e,ε) + sⁿ(e,ε) + s¹(e,ε)
+  bᵉ(ε)   = m(eₕ,ε) + l(ε)
+
+  aᵉ,bᵉ
+end
+
 function cortical_flow_problem_3D(ulₕ,plₕ,eₕ,dΩᶜ,dΓ,nΓ,
     γ::Float64,Pe::Float64,μˡ::Float64,R::Float64,ξ₀::Function)
 

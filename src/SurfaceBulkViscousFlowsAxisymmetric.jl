@@ -23,13 +23,8 @@ function surface_bulk_viscous_flows_axisymmetric(
   # Background geometry
   cells   = (n,div(n,2))
   h       = (domain[2]-domain[1])/n
-  tol_red = h/10.0
   bgmodel = CartesianDiscreteModel(domain,cells)
   Ω       = Triangulation(bgmodel)
-
-  bgmodel.face_labeling.d_to_dface_to_entity[1][(n÷2)+1-(n÷10):(n÷2)+1+(n÷10)] .= 1
-  bgmodel.face_labeling.d_to_dface_to_entity[1][(n÷2)+1:(n÷2)+1] .= 9
-  bgmodel.face_labeling.d_to_dface_to_entity[2][(3*(n÷2)-1-3*(n÷10-1)):3:(3*(n÷2)+2+3*(n÷10-1))] .= 1
 
   # Buffer of active model and integration objects
   degree = order < 3 ? 3 : 2*order
@@ -73,7 +68,7 @@ function surface_bulk_viscous_flows_axisymmetric(
 
       # Current time level set
       φ₋  = AlgoimCallLevelSetFunction(_φ₋,∇(_φ₋))
-      ( ( i % redistance_frequency == 0 ) && ( _φ₋(Point(0.0,0.0)) < -(h/2.0+tol_red) ) ) && begin
+      ( i % redistance_frequency == 0 ) && begin
         _φ₋ = compute_distance_fe_function(bgmodel,Vbg,φ₋,order,cppdegree=3)
         φ₋  = AlgoimCallLevelSetFunction(_φ₋,∇(_φ₋))
       end
@@ -125,10 +120,11 @@ function surface_bulk_viscous_flows_axisymmetric(
 
     update_buffer!(i,t,dt,disp,val)
 
-    # Triangulations and aggregates
+    # Triangulations
     Ωˡ = buffer[].Ωˡ
     Ωᶜ = buffer[].Ωᶜ
 
+    # Aggregates
     aggsˡ = buffer[].aggsˡ
 
     # Measures and normal
@@ -138,10 +134,15 @@ function surface_bulk_viscous_flows_axisymmetric(
     nΓ  = buffer[].nΓ
     φ   = buffer[].φ₋
 
+    # Ghost skeleton
+    Λ  = SkeletonTriangulation(Ωᶜ)
+    dΛ = Measure(Λ,2*order)
+    nΛ = get_normal_vector(Λ)
+
     # Test FE spaces
 
     ## (u,p)-bulk
-    Vstdᵘˡ = TestFESpace(Ωˡ,reffeᵘ,dirichlet_tags=[5],
+    Vstdᵘˡ = TestFESpace(Ωˡ,reffeᵘ,dirichlet_tags=["boundary"],
                                    dirichlet_masks=[(false,true)])
     Vserᵘˡ = TestFESpace(Ωˡ,reffeˢ,conformity=:L2)
     Vᵘˡ    = AgFEMSpace(Vstdᵘˡ,aggsˡ,Vserᵘˡ)
@@ -149,7 +150,7 @@ function surface_bulk_viscous_flows_axisymmetric(
     Vᵖˡ    = AgFEMSpace(Vstdᵖˡ,aggsˡ)
 
     # u-surface
-    Vʷ = TestFESpace(Ωᶜ,reffeʷ,dirichlet_tags=[5],
+    Vʷ = TestFESpace(Ωᶜ,reffeʷ,dirichlet_tags=["boundary"],
                                dirichlet_masks=[(false,true)])
     # e-surface
     Vᵉ = TestFESpace(Ωᶜ,reffeᵉ)
@@ -172,7 +173,7 @@ function surface_bulk_viscous_flows_axisymmetric(
     Yʳ = MultiFieldFESpace([Vᵉ,Vˡ])
     Xʳ = MultiFieldFESpace([Uᵉ,Uˡ])
 
-    Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ
+    Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ,dΛ,nΛ
 
   end
 
@@ -182,14 +183,13 @@ function surface_bulk_viscous_flows_axisymmetric(
   u₀ = VectorValue(0.0,0.0)
   m₀ = 2.0
 
-  Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ = update_all!(0,t₀,Δt,u₀,m₀)
+  Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ,dΛ,nΛ = 
+    update_all!(0,t₀,Δt,u₀,m₀)
 
   # *** WEAK FORM PARAMETERS ***
   ξ(e) = 2.0 * e*e / ( 1.0 + e*e )
   # ** u-stabilisation **
   γʷ = γᶜ/h
-  # ** e-stabilisation **
-  γᵉ = γᶜ/h
 
   _eₕ = initial_density(Uᵉ,Xʳ,Yʳ,dΓ,dΩᶜ,nΓ)
   eₕ = interpolate_everywhere(_eₕ,Uᵉ)
@@ -256,12 +256,18 @@ function surface_bulk_viscous_flows_axisymmetric(
     i = i + 1
     t = t + Δt
 
-    Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ = 
+    Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ,dΛ,nΛ = 
       update_all!(i,t,Δt,υₕ,msₕ)
+
+    # ** e-stabilisation **
+    δ = 2.0 * msₕ * Δt
+    γⁿ = γᶜ * ( msₕ + 1.0 / ( δ + h ) )
+    γ¹ = γᶜ * msₕ * h
+    @show msₕ, δ, γʷ, γⁿ, γ¹
 
     assemᵉ = SparseMatrixAssembler(Tm,Tv,Uᵉ,Vᵉ)
     aᵉ,bᵉ = transport_problem_axisymmetric(
-      υₕ,eₕ,dΓ,dΩᶜ,nΓ,Δt,γᵉ,τᵈkₒ)
+      υₕ,eₕ,dΓ,nΓ,γⁿ,dΩᶜ,γ¹,dΛ,nΛ,τᵈkₒ,Δt)
     opᵉ = AffineFEOperator(aᵉ,bᵉ,Uᵉ,Vᵉ,assemᵉ)
     eₕ = solve(ps,opᵉ)
 
