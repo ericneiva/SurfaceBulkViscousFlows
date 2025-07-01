@@ -26,10 +26,17 @@ function mechanostability(U,X,Y,dΓ,dΩᶜ,nΓ)
   _eₕ = 1.0 + _eₕ
 end
 
-function bistable_wave(U,X,Y,dΓ,dΩᶜ,nΓ)
+function bistable_wave_2D(U,X,Y,dΓ,dΩᶜ,nΓ)
   eₐ = 0.8; Δe = 0.4; s₀ = 0.0; κ = 10
   θ(s) = min((s+s₀)^(3/2),0.85^(3/2))*pi
   H(x,s) = 1.0 / ( 1.0 + exp( - 2.0 * κ * ( atan(x[2],x[1]) - θ(s) ) ) )
+  (x,s) -> eₐ + Δe * H(x,s)
+end
+
+function bistable_wave_3D(U,X,Y,dΓ,dΩᶜ,nΓ)
+  eₐ = 0.8; Δe = 0.4; s₀ = 0.0; κ = 10
+  θ(s) = min((s+s₀)^(3/2),0.85^(3/2))*pi
+  H(x,s) = 1.0 / ( 1.0 + exp( - 2.0 * κ * ( atan(√(x[2]^2+x[3]^2),x[1]) - θ(s) ) ) )
   (x,s) -> eₐ + Δe * H(x,s)
 end
 

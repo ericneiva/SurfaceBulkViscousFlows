@@ -29,13 +29,13 @@ GridapPETSc.with() do
   surface_bulk_viscous_flows_axisymmetric(
     domain,ls,Pe,μˡ,R,20,Δt,2*Δt,center,x_axis,y_axis,rotation=rotation,
     output_frequency=output_frequency,writesol=true,
-    initial_density=bistable_wave,γᶜ=1.0,τᵈkₒ=τᵈkₒ,
+    initial_density=bistable_wave_2D,γᶜ=1.0,τᵈkₒ=τᵈkₒ,
     name="examples/OocyteAndSpindle/plt")
 
   surface_bulk_viscous_flows_axisymmetric(
     domain,ls,Pe,μˡ,R,n,Δt,T,center,x_axis,y_axis,rotation=rotation,
     output_frequency=output_frequency,writesol=true,
-    initial_density=bistable_wave,γᶜ=1.0,τᵈkₒ=τᵈkₒ,
+    initial_density=bistable_wave_2D,γᶜ=1.0,τᵈkₒ=τᵈkₒ,
     name="examples/OocyteAndSpindle/plt")
 
 end

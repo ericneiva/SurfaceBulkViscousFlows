@@ -36,7 +36,8 @@ include("SurfaceBulkViscousFlows3D.jl")
 export unit_density
 export verification
 export mechanostability
-export bistable_wave
+export bistable_wave_2D
+export bistable_wave_3D
 export contraction_wave
 
 export contractile_ring_axisymmetric
