@@ -32,9 +32,11 @@ include("SurfaceBulkInSphere.jl")
 include("SurfaceBulkViscousFlowsAxisymmetric.jl")
 include("SurfaceBulkViscousFlows2D.jl")
 include("SurfaceBulkViscousFlows3D.jl")
+include("DivergenceTheoremOnManifolds.jl")
 
 export unit_density
-export verification
+export verification_2D
+export verification_3D
 export mechanostability
 export bistable_wave_2D
 export bistable_wave_3D
@@ -49,5 +51,8 @@ export surface_bulk_in_sphere_axisymmetric
 export surface_bulk_viscous_flows_axisymmetric
 export surface_bulk_viscous_flows_2D
 export surface_bulk_viscous_flows_3D
+
+export check_divergence_theorem_on_manifold_2D
+export check_divergence_theorem_on_manifold_3D
 
 end # module SurfaceBulkViscousFlows

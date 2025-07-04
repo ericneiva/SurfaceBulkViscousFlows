@@ -1,10 +1,31 @@
 unit_density(U,X,Y,dΓ,dΩᶜ,nΓ) = 1.0
 
-function verification(U,X,Y,dΓ,dΩᶜ,nΓ)
+function verification_2D()
   eₐ = 1.0
   Δe = 0.1
   s₀ = 1.0 / 6.0
   x -> ( atan(x[2],-x[1]) > min(s₀,1.0)*pi ) ? eₐ : eₐ + Δe
+end
+
+function verification_3D()
+  eₐ = 1.0
+  Δe = 0.1
+  s₀ = 1.0 / 6.0
+  x -> ( atan(√(x[2]^2+x[3]^2),-x[1]) > min(s₀,1.0)*pi ) ? eₐ : eₐ + Δe
+end
+
+function verification_2D(U,X,Y,dΓ,dΩᶜ,nΓ)
+  eₐ = 1.0
+  Δe = 0.1
+  s₀ = 1.0 / 6.0
+  x -> ( atan(x[2],-x[1]) > min(s₀,1.0)*pi ) ? eₐ : eₐ + Δe
+end
+
+function verification_3D(U,X,Y,dΓ,dΩᶜ,nΓ)
+  eₐ = 1.0
+  Δe = 0.1
+  s₀ = 1.0 / 6.0
+  x -> ( atan(√(x[2]^2+x[3]^2),-x[1]) > min(s₀,1.0)*pi ) ? eₐ : eₐ + Δe
 end
 
 function mechanostability(U,X,Y,dΓ,dΩᶜ,nΓ)

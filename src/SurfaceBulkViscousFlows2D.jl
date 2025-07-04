@@ -7,7 +7,7 @@ function surface_bulk_viscous_flows_2D(
             n::Int,
             Δt₀::Float64,
             T::Float64;
-            initial_density::Function = verification,
+            initial_density::Function = verification_2D,
             activity::Function = unit_activity,
             order::Int = 2,
             γᶜ::Float64 = 1.0,

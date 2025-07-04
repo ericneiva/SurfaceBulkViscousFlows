@@ -24,7 +24,7 @@ GridapPETSc.with() do
 
   surface_bulk_viscous_flows_axisymmetric(
     domain,ls,Pe,μˡ,R,n,Δt,T,output_frequency=output_frequency,
-    writesol=true,initial_density=verification,γᶜ=1.0,τᵈkₒ=τᵈkₒ,
+    writesol=true,initial_density=verification_2D,γᶜ=1.0,τᵈkₒ=τᵈkₒ,
     name="examples/Verification/plt")
 
 end
