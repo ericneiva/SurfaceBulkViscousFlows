@@ -24,6 +24,21 @@ Referred to the paper sections
 ### Prerequisites
 
   - A Julia installation ([link to instructions](https://julialang.org/install/))
+  - Install PETSc version 3.15.2 with mumps and let Julia find the library:
+
+**Linux instructions:** On your folder of choice;
+
+```shell
+  wget https://web.cels.anl.gov/projects/petsc/download/release-snapshots/petsc-3.15.2.tar.gz
+  tar -xvzf petsc-3.15.2.tar.gz
+  cd petsc-3.15.2.tar.gz
+  ./configure -download-mumps -download-scalapack -download-parmetis -download-metis --download-bison -download-ptscotch --download-make --with-debugging=0 --download-mpich --download-fblaslapack=1
+  make PETSC_DIR=/your-folder/petsc-3.15.2 PETSC_ARCH=arch-linux-c-opt check
+```
+
+Note that for PETSc you might need to install missing required libraries.
+
+Add `export JULIA_PETSC_LIBRARY="/your-folder/petsc-3.15.2/arch-linux-c-opt/lib/libpetsc.so"` to your `.bashrc` file.
 
 ### Running an example
 
@@ -40,7 +55,7 @@ Referred to the paper sections
 
 ```julia
   julia> # press ] to enter Pkg mode...
-  (SurfaceBulkViscousFlows) pkg> instantiate
+  (SurfaceBulkViscousFlows) pkg> instantiate # Check that Julia points to your local PETSc installation
 ```
 
   - Run the example of your choice
