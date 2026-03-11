@@ -3,10 +3,19 @@ iy(x) = VectorValue( 0.0, 1.0 / x[2] ); y(x) = x[2]
 function cortical_flow_problem_axisymmetric(ulₕ,plₕ,eₕ,dΩᶜ,dΓ,nΓ,
     γ::Float64,Pe::Float64,μˡ::Float64,R::Float64,ξ₀::Function)
 
-  aʷ(υ,μ) = ∫( 2.0 * ( εᶜ(υ,nΓ)⊙εᵈ(μ,nΓ) + (υ⋅iy)*(μ⋅iy) ) * y )dΓ
+  p = 2.0
+  s_to_d = 0.25
+  ϵ(e) = s_to_d * ( p + 1.0 ) * e*e / ( p + e*e )
+
+  aʷ(υ,μ,e) = 
+    ∫(       ϵ∘(e)   * ( ( 2.0 * εᶜ(υ,nΓ)⊙εᵈ(μ,nΓ) + (υ⋅iy)*(μ⋅iy) ) * y ) + 
+       ( 1 - ϵ∘(e) ) * ( ( divᶜ(υ,nΓ)⋅divᶜ(μ,nΓ) + 
+                           divᶜ(υ,nΓ)*(μ⋅iy) +
+                           divᶜ(μ,nΓ)*(υ⋅iy) +
+                           (υ⋅iy)*(μ⋅iy) ) * y ) )dΓ
 
   ξ(e) = 2.0 * e*e / ( 1.0 + e*e )
-
+  
   f(μ,e) = ∫( Pe * ( -(divᶜ(μ,nΓ)+μ⋅iy)*(ξ∘(e)) ) * ξ₀ )dΓ
 
   σᵘ(ε,q) = 2.0 * μˡ * R * ε - q * one(ε)
@@ -20,7 +29,7 @@ function cortical_flow_problem_axisymmetric(ulₕ,plₕ,eₕ,dΩᶜ,dΓ,nΓ,
   r²(u,ℓ) = ∫( ( u⋅(ℓ*nΓ ) )*y )dΓ
 
   aᵛ((υ,l¹,l²),(μ,ℓ¹,ℓ²)) =
-    aʷ(υ,μ) + sᵘ(υ,μ) + r¹(υ,ℓ¹) + r¹(μ,l¹) + r²(υ,ℓ²) + r²(μ,l²)
+    aʷ(υ,μ,eₕ) + sᵘ(υ,μ) + r¹(υ,ℓ¹) + r¹(μ,l¹) + r²(υ,ℓ²) + r²(μ,l²)
   bᵛ((μ,ℓ¹,ℓ²)) = f(μ,eₕ) - βʳ(μ,ulₕ,plₕ)
 
   aᵛ, bᵛ
@@ -50,13 +59,25 @@ function bulk_flow_problem_axisymmetric(
 end
 
 function transport_problem_axisymmetric(u,eₕ,dΓ,dΩᶜ,nΓ,
-    dt::Float64,γ::Float64,τᵈkₒ::Float64)
+    dt::Float64,γ::Float64,τᵈkₒ::Float64,eᶠ::Float64,Pe::Float64)
   
-  m(e,ε)  = ∫( (1/dt)*(e*ε)*y )dΓ
+  m(e,ε)  = ∫( ( 1/dt )*( e*ε )*y )dΓ
   sᵈ(e,ε) = ∫( ( ∇ᵈ(e,nΓ)⋅∇ᵈ(ε,nΓ) )*y )dΓ
-  c(e,ε)  = ∫( ( (u⋅∇ᵈ(e,nΓ))*ε + (tr(∇ᵈ(u,nΓ))+u⋅iy)*(e*ε) )*y )dΓ
-  r(e,ε)  = ∫( τᵈkₒ*(e*ε)*y )dΓ
-  l(ε)    = ∫( τᵈkₒ*ε*y )dΓ
+  c(e,ε)  = ∫( ( (u⋅∇ᵈ(e,nΓ))*ε + (tr(∇ᵈ(u,nΓ))+u⋅iy) )*y )dΓ
+
+  ξ(e) = 2.0 * e*e / ( 1.0 + e*e )
+
+  p = 2.0
+  s_to_d = 0.25
+  ϵ(e) = s_to_d * ( p + 1.0 ) * e*e / ( p + e*e )
+
+  σ₀ = τᵈkₒ
+  t(u,e) = - ( ( 1 + ϵ(e) ) * 
+    ( εᶜ(u,nΓ)⊙TensorValue(1.0,0.0,0.0,1.0) + u⋅iy ) + 
+      Pe * ( ξ(e) - ξ(1.0) ) ) / σ₀
+
+  r(e,ε)  = ∫( ( exp∘(t(u,eₕ)) )*( τᵈkₒ*(e*ε)*y ) )dΓ
+  l(ε)    = ∫( ( τᵈkₒ*eᶠ )*ε*y )dΓ
   s(υ,μ)  = ∫( γ*((nΓ⋅∇(υ))⊙(nΓ⋅∇(μ))) )dΩᶜ
 
   aᵉ(e,ε) = m(e,ε) + c(e,ε) + r(e,ε) + sᵈ(e,ε) + s(e,ε)

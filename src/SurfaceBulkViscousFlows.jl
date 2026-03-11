@@ -31,10 +31,18 @@ include("SurfaceBulkViscousFlows3D.jl")
 
 export unit_density
 export verification
+
+export mechanostability_axisymmetric
 export mechanostability
+
+export initial_ring_axisymmetric
+export initial_ring_3D
 
 export contractile_ring_axisymmetric
 export contractile_ring_3D
+
+export unit_activity_axisymmetric
+export unit_activity_3D
 
 export surface_bulk_in_sphere_axisymmetric
 export surface_bulk_viscous_flows_axisymmetric

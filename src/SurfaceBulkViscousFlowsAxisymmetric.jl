@@ -183,6 +183,9 @@ function surface_bulk_viscous_flows_axisymmetric(
 
   Xᵛ,Yᵛ,Xᵘ,Yᵘ,Xʳ,Yʳ,Uᵉ,Vᵉ,dΩˡ,dΩᶜ,dΓ,nΓ,φ = update_all!(0,t₀,Δt,u₀,m₀)
 
+  Nₜ = ( 2*π ) * ( ∑( ∫( y )dΩˡ ) + ∑( ∫( y )dΓ ) )
+  eᶠ = 1.0
+
   # *** WEAK FORM PARAMETERS ***
   ξ(e) = 2.0 * e*e / ( 1.0 + e*e )
   # ** u-stabilisation **
@@ -247,10 +250,14 @@ function surface_bulk_viscous_flows_axisymmetric(
 
     end
 
+    msₕ = get_maximum_magnitude_with_dirichlet(υₕ)
+
+    aυₕ = ( ∑( ∫( ulₕ*y )dΩˡ ) / ∑( ∫( y )dΩˡ ) )
+     υₕ =  υₕ - aυₕ
+    ulₕ = ulₕ - aυₕ
+
     writesol && postprocess_all(φ,dΩˡ.quad.trian,dΩᶜ.quad.trian,
       eₕ,υₕ,ulₕ,plₕ,i=i,of=output_frequency,name=name)
-
-    msₕ = get_maximum_magnitude_with_dirichlet(υₕ)
 
     i = i + 1
     t = t + Δt
@@ -259,10 +266,15 @@ function surface_bulk_viscous_flows_axisymmetric(
       update_all!(i,t,Δt,υₕ,msₕ)
 
     assemᵉ = SparseMatrixAssembler(Tm,Tv,Uᵉ,Vᵉ)
+
     aᵉ,bᵉ = transport_problem_axisymmetric(
-      υₕ,eₕ,dΓ,dΩᶜ,nΓ,Δt,γᵉ,τᵈkₒ)
+      υₕ,eₕ,dΓ,dΩᶜ,nΓ,Δt,γᵉ,τᵈkₒ,eᶠ,Pe)
     opᵉ = AffineFEOperator(aᵉ,bᵉ,Uᵉ,Vᵉ,assemᵉ)
     eₕ = solve(ps,opᵉ)
+
+    eᶠ = ( Nₜ - ( 2*π ) * ( ∑( ∫( eₕ*y )dΓ ) ) ) / 
+              ( ( 2*π ) * ( ∑( ∫( y )dΩˡ ) ) )
+    @show ∑( ∫( eₕ*y )dΓ )
 
   end
 
