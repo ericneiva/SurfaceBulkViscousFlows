@@ -48,7 +48,7 @@ function mechanostability(U,X,Y,dΓ,dΩᶜ,nΓ)
 end
 
 function initial_ring_axisymmetric(U,X,Y,dΓ,dΩᶜ,nΓ)
-  Am = 10.0; Aₒ = 1.0; ω = 0.1;
+  Am = 1.0; Aₒ = 0.05; ω = 0.1;
   x -> ( Aₒ + ( Am - Aₒ ) * ( exp( -x[1]*x[1] / ( 2.0 * ω * ω ) ) ) ) * x[2]
 end
 
